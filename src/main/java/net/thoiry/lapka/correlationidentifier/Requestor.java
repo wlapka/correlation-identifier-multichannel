@@ -36,10 +36,10 @@ public class Requestor implements Runnable {
 	private final ReplyReceiver replyReceiver;
 	private final CountDownLatch countDownLatch;
 
-	public Requestor(BlockingQueue<Message> requestQueue, ConcurrentMap<Long, Message> replyMap,
+	public Requestor(BlockingQueue<Message> requestQueue, ReplyChannel<Long, Message> replyChannel,
 			CountDownLatch countDownLatch) {
 		this.sender = new Sender(requestQueue, this.sentRequests, this.internalCountDownLatch);
-		this.replyReceiver = new ReplyReceiver(replyMap, this.sentRequests, this.internalCountDownLatch);
+		this.replyReceiver = new ReplyReceiver(replyChannel, this.sentRequests, this.internalCountDownLatch);
 		this.countDownLatch = countDownLatch;
 	}
 
@@ -72,13 +72,14 @@ public class Requestor implements Runnable {
 	private static class ReplyReceiver implements Runnable {
 
 		private volatile boolean stop = false;
-		private final ConcurrentMap<Long, Message> replyMap;
+		private final ReplyChannel<Long, Message> replyChannel;
+//		private final ConcurrentMap<Long, Message> replyMap;
 		private final ConcurrentMap<Long, Message> sentRequests;
 		private final CountDownLatch countDownLatch;
 
-		public ReplyReceiver(ConcurrentMap<Long, Message> replyMap, ConcurrentMap<Long, Message> sentRequests,
+		public ReplyReceiver(ReplyChannel<Long, Message> replyChannel, ConcurrentMap<Long, Message> sentRequests,
 				CountDownLatch countDownLatch) {
-			this.replyMap = replyMap;
+			this.replyChannel = replyChannel;
 			this.sentRequests = sentRequests;
 			this.countDownLatch = countDownLatch;
 		}
@@ -99,7 +100,7 @@ public class Requestor implements Runnable {
 		private void processReplies() {
 			for (Iterator<Long> iterator = this.sentRequests.keySet().iterator(); iterator.hasNext();) {
 				Long correlationId = iterator.next();
-				Message reply = this.replyMap.remove(correlationId);
+				Message reply = this.replyChannel.remove(correlationId);
 				if (reply != null) {
 					Message request = this.sentRequests.get(reply.getCorrelationId());
 					LOGGER.info("{}: Received reply for request: {}.", Thread.currentThread().getId(), request);

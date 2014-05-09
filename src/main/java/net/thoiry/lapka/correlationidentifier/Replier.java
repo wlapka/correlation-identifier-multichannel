@@ -7,7 +7,6 @@ package net.thoiry.lapka.correlationidentifier;
 
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
@@ -37,10 +36,10 @@ public class Replier implements Runnable {
 	private final ReplySender replySender;
 	private final CountDownLatch countDownLatch;
 
-	public Replier(BlockingQueue<Message> requestQueue, ConcurrentMap<Long, Message> replyMap,
+	public Replier(BlockingQueue<Message> requestQueue, ReplyChannel<Long, Message> replyChannel,
 			CountDownLatch countDownLatch) {
 		this.requestReceiver = new RequestReceiver(requestQueue, this.delayedQueue, internalCountDownLatch);
-		this.replySender = new ReplySender(this.delayedQueue, replyMap, internalCountDownLatch);
+		this.replySender = new ReplySender(this.delayedQueue, replyChannel, internalCountDownLatch);
 		this.countDownLatch = countDownLatch;
 	}
 
@@ -74,13 +73,13 @@ public class Replier implements Runnable {
 
 		private volatile boolean stop = false;
 		private final DelayQueue<DelayedMessage> delayedQueue;
-		private final ConcurrentMap<Long, Message> replyMap;
-		private final CountDownLatch countDownLatch;
+		private final ReplyChannel<Long, Message> replyChannel;
+ 			private final CountDownLatch countDownLatch;
 
-		public ReplySender(DelayQueue<DelayedMessage> delayedQueue, ConcurrentMap<Long, Message> replyMap,
+		public ReplySender(DelayQueue<DelayedMessage> delayedQueue, ReplyChannel<Long, Message> replyChannel,
 				CountDownLatch countDownLatch) {
 			this.delayedQueue = delayedQueue;
-			this.replyMap = replyMap;
+			this.replyChannel = replyChannel;
 			this.countDownLatch = countDownLatch;
 		}
 
@@ -115,7 +114,7 @@ public class Replier implements Runnable {
 		private void sendReply(Message request) throws InterruptedException {
 			Long replyId = NEXTID.getAndIncrement();
 			Message reply = new Message(replyId, request.getMessageId(), "Reply for " + request.getBody());
-			this.replyMap.put(reply.getCorrelationId(), reply);
+			this.replyChannel.put(reply.getCorrelationId(), reply);
 			LOGGER.info("Sent reply {}", reply);
 		}
 

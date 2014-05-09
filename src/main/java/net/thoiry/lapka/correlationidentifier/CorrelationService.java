@@ -6,8 +6,6 @@
 package net.thoiry.lapka.correlationidentifier;
 
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -26,13 +24,13 @@ public class CorrelationService {
 	private static final int THREADPOOLSIZE = 10;
 	private static final int NUMBEROFTHREADS = 5;
 	private final BlockingQueue<Message> requestQueue = new LinkedBlockingQueue<>();
-	private final ConcurrentMap<Long, Message> replyMap = new ConcurrentHashMap<>();
+	private final ReplyChannel<Long, Message> replyChannel = new ReplyChannelImpl<>();
 	private final CountDownLatch countDownLatch = new CountDownLatch(NUMBEROFTHREADS);
-	private final Requestor requestor1 = new Requestor(requestQueue, replyMap, countDownLatch);
-	private final Requestor requestor2 = new Requestor(requestQueue, replyMap, countDownLatch);
-	private final Requestor requestor3 = new Requestor(requestQueue, replyMap, countDownLatch);
-	private final Requestor requestor4 = new Requestor(requestQueue, replyMap, countDownLatch);
-	private final Replier replier = new Replier(requestQueue, replyMap, countDownLatch);
+	private final Requestor requestor1 = new Requestor(requestQueue, replyChannel, countDownLatch);
+	private final Requestor requestor2 = new Requestor(requestQueue, replyChannel, countDownLatch);
+	private final Requestor requestor3 = new Requestor(requestQueue, replyChannel, countDownLatch);
+	private final Requestor requestor4 = new Requestor(requestQueue, replyChannel, countDownLatch);
+	private final Replier replier = new Replier(requestQueue, replyChannel, countDownLatch);
 	private final ExecutorService executorService = Executors.newFixedThreadPool(THREADPOOLSIZE);
 
 	private void start() throws InterruptedException {
@@ -59,7 +57,7 @@ public class CorrelationService {
 		LOGGER.info("Application started");
 		CorrelationService correlationService = new CorrelationService();
 		correlationService.start();
-		Thread.sleep(2000);
+		Thread.sleep(500);
 		correlationService.stop();
 		LOGGER.info("Application finished");
 	}
